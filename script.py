@@ -44,8 +44,8 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
                 df = df.loc[(df['Risk/Reward Ratio'] >= float(rr))]
             if pop != None:
                 df = df.loc[(df['PoP (%)'] >= float(pop))]
-            if rr == None and pop == None:
-                df = df.loc[(df['Risk/Reward Ratio'] >= .25) & (df['PoP (%)'] <= 99.99)]
+            # if rr == None and pop == None:
+            #     df = df.loc[(df['Risk/Reward Ratio'] >= .25) & (df['PoP (%)'] <= 99.99)]
             return 'No good credit spread found' if df.empty else df # .sort_values(by='Risk/Reward', ascending=False)
         elif spread_type == 'ds':
             data = []
@@ -60,15 +60,15 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
                 df = df.loc[(df['Risk/Reward Ratio'] >= float(rr))]
             if pop != None:
                 df = df.loc[(df['PoP (%)'] >= float(pop))]
-            if rr == None and pop == None:
-                df = df.loc[(df['Risk/Reward Ratio'] >= 2) & (df['PoP (%)'] >= 20)]
+            # if rr == None and pop == None:
+            #     df = df.loc[(df['Risk/Reward Ratio'] >= 2) & (df['PoP (%)'] >= 20)]
             return 'No good debit spread found' if df.empty else df # .sort_values(by='Risk/Reward', ascending=False)
         else:
-            print('Not a valid spread type')
+            return 'Not a valid spread type'
     except AssertionError:
-        print('Not a valid ticker symbol')
+        return 'Not a valid ticker symbol'
     except ValueError:
-        print('Not a valid expiration date')
+        return 'Not a valid expiration date'
 
 def main():
     args = init_args()
