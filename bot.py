@@ -20,8 +20,8 @@ async def find(ctx, ticker: str, exp_date: str, spread_type: str, rr: float = No
         caption = '➡ Results for {} {} Contracts\n➡ Spread Type: {}, Risk/Reward Ratio >= {}, PoP >= {}%'.format(ticker, exp_date, spread_type, rr, pop)
         filename = '{}_{}_{}_{}_{}.txt'.format(ticker, exp_date, spread_type, rr, pop)
         await ctx.send(caption, file=discord.File(BytesIO(tabulate(res, headers='keys', tablefmt='psql').encode('utf-8')), filename))
-    else:
-        await ctx.send('Nothing found 🥺\n🔹 Check if the parameters provided are valid\n🔹 Or the optional filters (R/R & PoP) may be too strict')
+    elif isinstance(res, str):
+        await ctx.send(res)
 
 @find.error
 async def do_repeat_handler(ctx, error):
