@@ -3,14 +3,21 @@ import argparse
 import pandas as pd
 from yahoo_fin import options
 from yahoo_fin import stock_info as si
+from datetime import datetime
 
 def calculate(spread_type, data, strike1, strike2):
     if spread_type == 'cs':
         # max gain = higher strike premium - lower strike premium
         # max loss = ((higher strike - lower strike) * 100) - max gain
         # pop = 100 - [(the credit received / strike price width) x 100]
-        strike1_diff = strike1['Ask'] - strike1['Bid']
-        strike2_diff = strike2['Ask'] - strike2['Bid']
+        if strike1['Ask'] == '-' or strike1['Bid'] == '-':
+            strike1_diff = 0
+        else:
+            strike1_diff = float(strike1['Ask']) - float(strike1['Bid'])
+        if strike2['Ask'] == '-' or strike2['Bid'] == '-':
+            strike2_diff = 0
+        else:
+            strike2_diff = float(strike2['Ask']) - float(strike2['Bid'])
         max_gain = round((strike2['Last Price'] - strike1['Last Price']) * 100, 0)
         max_loss = round(((strike2['Strike'] - strike1['Strike']) * 100) - max_gain, 0)
         percent_return = round(max_gain / max_loss, 2) if max_loss != 0 else 0
@@ -20,8 +27,14 @@ def calculate(spread_type, data, strike1, strike2):
         # max loss = lower strike premium - higher strike premium
         # max gain = ((higher strike - lower strike) * 100) - max loss
         # pop = 100 - [(the max profit / strike price width) x 100]
-        strike1_diff = strike1['Ask'] - strike1['Bid']
-        strike2_diff = strike2['Ask'] - strike2['Bid']
+        if strike1['Ask'] == '-' or strike1['Bid'] == '-':
+            strike1_diff = 0
+        else:
+            strike1_diff = float(strike1['Ask']) - float(strike1['Bid'])
+        if strike2['Ask'] == '-' or strike2['Bid'] == '-':
+            strike2_diff = 0
+        else:
+            strike2_diff = float(strike2['Ask']) - float(strike2['Bid'])
         max_loss = round((strike1['Last Price'] - strike2['Last Price']) * 100, 0)
         max_gain = round(((strike2['Strike'] - strike1['Strike']) * 100) - max_loss, 0)
         percent_return = round(max_gain / max_loss, 2) if max_loss != 0 else 0
@@ -70,7 +83,26 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
     except ValueError:
         return 'Not a valid contract expiration date'
 
+def find_em(ticker, exp_date):
+    sd = .6827
+    curr_price = round(si.get_live_price(ticker), 2)
+    low = curr_price - (curr_price * (1 - sd))
+    high = curr_price + (curr_price * (1 - sd))
+    calls = options.get_calls(ticker, exp_date)
+    calls = calls.loc[(calls['Strike'] >= low) & (calls['Strike'] <= high)]
+    new_calls = calls['Implied Volatility'].str.replace(r'%', r'').astype('float')
+    puts = options.get_puts(ticker, exp_date)
+    puts = puts.loc[(puts['Strike'] >= low) & (puts['Strike'] <= high)]
+    new_puts = puts['Implied Volatility'].str.replace(r'%', r'').astype('float')
+    volatility = (new_calls.mean() + new_puts.mean()) / 2
+    d1 = datetime.today()
+    d2 = datetime.strptime(exp_date, '%m/%d/%y')
+    days_left = abs(d1 - d2).days + 1
+    em = si.get_live_price(ticker) * (volatility / 100) * math.sqrt(days_left/365)
+    return 'Volatility: {}, Expected movement: -/+{}'.format(volatility, em)
+
 def main():
+    # get_avg_vol()
     args = init_args()
     if args.ticker is not None and args.exp_date is not None and args.spread_type is not None:
         print(find_spreads(args.ticker, args.exp_date, args.spread_type, args.rr, args.pop))
