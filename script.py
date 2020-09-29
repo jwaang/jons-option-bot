@@ -5,41 +5,47 @@ from yahoo_fin import options
 from yahoo_fin import stock_info as si
 from datetime import datetime
 
+# Finviz api get latest news and analyst ratings 
+# yahoo-fin get financials http://theautomatic.net/yahoo_fin-documentation/#get_financials
+# https://towardsdatascience.com/stock-news-sentiment-analysis-with-python-193d4b4378d4
+
 def calculate(spread_type, data, strike1, strike2):
     if spread_type == 'cs':
         # max gain = higher strike premium - lower strike premium
         # max loss = ((higher strike - lower strike) * 100) - max gain
         # pop = 100 - [(the credit received / strike price width) x 100]
         if strike1['Ask'] == '-' or strike1['Bid'] == '-':
-            strike1_diff = 0
-        else:
-            strike1_diff = float(strike1['Ask']) - float(strike1['Bid'])
+            return
         if strike2['Ask'] == '-' or strike2['Bid'] == '-':
-            strike2_diff = 0
-        else:
-            strike2_diff = float(strike2['Ask']) - float(strike2['Bid'])
-        max_gain = round((strike2['Last Price'] - strike1['Last Price']) * 100, 0)
-        max_loss = round(((strike2['Strike'] - strike1['Strike']) * 100) - max_gain, 0)
+            return
+        strike1_diff = strike1['Ask'] - strike1['Bid']
+        strike2_diff = strike2['Ask'] - strike2['Bid']
+        strike1_mid = (strike1['Ask'] + strike1['Bid']) / 2
+        strike2_mid = (strike2['Ask'] + strike2['Bid']) / 2
+        net = round(strike2['Last Price'] - strike1['Last Price'], 2)
+        max_gain = round((strike2_mid - strike1_mid) * 100, 2)
+        max_loss = round(((strike2['Strike'] - strike1['Strike']) * 100) - max_gain, 2)
         percent_return = round(max_gain / max_loss, 2) if max_loss != 0 else 0
         pop = round(100 - (((max_gain / 100) / (strike2['Strike'] - strike1['Strike'])) * 100), 2)
-        data.append([strike1['Strike'], strike2['Strike'], strike1_diff, strike2_diff, max_loss, max_gain, percent_return, pop])
+        data.append([strike1['Strike'], strike2['Strike'], strike1_diff, strike2_diff, net, max_loss, max_gain, percent_return, pop])
     elif spread_type == 'ds':
         # max loss = lower strike premium - higher strike premium
         # max gain = ((higher strike - lower strike) * 100) - max loss
         # pop = 100 - [(the max profit / strike price width) x 100]
         if strike1['Ask'] == '-' or strike1['Bid'] == '-':
-            strike1_diff = 0
-        else:
-            strike1_diff = float(strike1['Ask']) - float(strike1['Bid'])
+            return
         if strike2['Ask'] == '-' or strike2['Bid'] == '-':
-            strike2_diff = 0
-        else:
-            strike2_diff = float(strike2['Ask']) - float(strike2['Bid'])
-        max_loss = round((strike1['Last Price'] - strike2['Last Price']) * 100, 0)
-        max_gain = round(((strike2['Strike'] - strike1['Strike']) * 100) - max_loss, 0)
+            return
+        strike1_diff = strike1['Ask'] - strike1['Bid']
+        strike2_diff = strike2['Ask'] - strike2['Bid']
+        strike1_mid = (strike1['Ask'] + strike1['Bid']) / 2
+        strike2_mid = (strike2['Ask'] + strike2['Bid']) / 2
+        net = round(strike1_mid - strike2_mid, 2)
+        max_loss = round((strike1_mid - strike2_mid) * 100, 2)
+        max_gain = round(((strike2['Strike'] - strike1['Strike']) * 100) - max_loss, 2)
         percent_return = round(max_gain / max_loss, 2) if max_loss != 0 else 0
         pop = round(100 - (((max_gain / 100) / (strike2['Strike'] - strike1['Strike'])) * 100), 2)
-        data.append([strike1['Strike'], strike2['Strike'], strike1_diff, strike2_diff, max_loss, max_gain, percent_return, pop])
+        data.append([strike1['Strike'], strike2['Strike'], strike1_diff, strike2_diff, net, max_loss, max_gain, percent_return, pop])
 
 def find_spreads(ticker, date, spread_type, rr=None, pop=None):
     try:
@@ -51,7 +57,7 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
             for i in range(0, len(puts_filtered)-1):
                 for j in range(i+1, len(puts_filtered)):
                     calculate(spread_type, data, puts_filtered.iloc[i], puts_filtered.iloc[j])
-            df = pd.DataFrame(data, columns=['Strike 1 (LONG)', 'Strike 2 (SHORT)', 'S1 Spread Diff', 'S2 Spread Diff', 'Max Loss', 'Max Gain', 'Risk/Reward Ratio', 'PoP (%)'])
+            df = pd.DataFrame(data, columns=['Strike 1 (LONG)', 'Strike 2 (SHORT)', 'S1 Spread Diff', 'S2 Spread Diff', 'Net Credit', 'Max Loss', 'Max Gain', 'Risk/Reward Ratio', 'PoP (%)'])
             pd.set_option('display.max_rows', df.shape[0]+1)
             if rr != None:
                 df = df.loc[(df['Risk/Reward Ratio'] >= float(rr))]
@@ -59,7 +65,7 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
                 df = df.loc[(df['PoP (%)'] >= float(pop))]
             # if rr == None and pop == None:
             #     df = df.loc[(df['Risk/Reward Ratio'] >= .25) & (df['PoP (%)'] <= 99.99)]
-            return 'No good credit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df # .sort_values(by='Risk/Reward', ascending=False)
+            return 'No good credit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df.to_string(index=False) # .sort_values(by='Risk/Reward', ascending=False)
         elif spread_type == 'ds':
             data = []
             calls = options.get_calls(ticker, date)
@@ -67,7 +73,7 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
             for i in range(0, len(calls_filtered)-1):
                 for j in range(i+1, len(calls_filtered)):
                     calculate(spread_type, data, calls_filtered.iloc[i], calls_filtered.iloc[j])
-            df = pd.DataFrame(data, columns=['Strike 1 (LONG)', 'Strike 2 (SHORT)', 'S1 Spread Diff', 'S2 Spread Diff', 'Max Loss', 'Max Gain', 'Risk/Reward Ratio', 'PoP (%)'])
+            df = pd.DataFrame(data, columns=['Strike 1 (LONG)', 'Strike 2 (SHORT)', 'S1 Spread Diff', 'S2 Spread Diff', 'Net Debit', 'Max Loss', 'Max Gain', 'Risk/Reward Ratio', 'PoP (%)'])
             pd.set_option('display.max_rows', df.shape[0]+1)
             if rr != None:
                 df = df.loc[(df['Risk/Reward Ratio'] >= float(rr))]
@@ -75,7 +81,7 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
                 df = df.loc[(df['PoP (%)'] >= float(pop))]
             # if rr == None and pop == None:
             #     df = df.loc[(df['Risk/Reward Ratio'] >= 2) & (df['PoP (%)'] >= 20)]
-            return 'No good debit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df # .sort_values(by='Risk/Reward', ascending=False)
+            return 'No good debit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df.to_string(index=False) # .sort_values(by='Risk/Reward', ascending=False)
         else:
             return 'Not a valid spread type'
     except AssertionError:
@@ -94,11 +100,11 @@ def find_em(ticker, exp_date):
     puts = options.get_puts(ticker, exp_date)
     puts = puts.loc[(puts['Strike'] >= low) & (puts['Strike'] <= high)]
     new_puts = puts['Implied Volatility'].str.replace(r'%', r'').astype('float')
-    volatility = (new_calls.mean() + new_puts.mean()) / 2
+    volatility = round((new_calls.mean() + new_puts.mean()) / 2, 2)
     d1 = datetime.today()
     d2 = datetime.strptime(exp_date, '%m/%d/%y')
     days_left = abs(d1 - d2).days + 1
-    em = si.get_live_price(ticker) * (volatility / 100) * math.sqrt(days_left/365)
+    em = round(si.get_live_price(ticker) * (volatility / 100) * math.sqrt(days_left/365), 2)
     return 'Volatility: {}, Expected movement: -/+{}'.format(volatility, em)
 
 def main():
@@ -119,4 +125,4 @@ def init_args():
     return parser.parse_args()
 
 # Uncomment if using script.py as standalone
-# main()
+main()
