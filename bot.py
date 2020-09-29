@@ -17,7 +17,7 @@ bot = commands.Bot(command_prefix='!')
 async def spreads(ctx, ticker: str, exp_date: str, spread_type: str, rr: float = None, pop: float = None):
     res = find_spreads(ticker.lower(), exp_date, spread_type.lower(), rr, pop)
     if isinstance(res, pd.DataFrame) and not res.empty:
-        caption = '➡ Results for {} {} Contracts\n➡ Spread Type: {}, Risk/Reward Ratio >= {}, PoP >= {}%'.format(ticker, exp_date, spread_type, rr, pop)
+        caption = '☑ Results for {} {} Contracts | Spread Type: {}, Risk/Reward Ratio >= {}, PoP >= {}%'.format(ticker, exp_date, spread_type, rr, pop)
         filename = '{}_{}_{}_{}_{}.txt'.format(ticker, exp_date, spread_type, rr, pop)
         await ctx.send(caption, file=discord.File(BytesIO(tabulate(res, headers='keys', tablefmt='psql').encode('utf-8')), filename))
     elif isinstance(res, str):

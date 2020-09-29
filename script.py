@@ -125,4 +125,4 @@ def init_args():
     return parser.parse_args()
 
 # Uncomment if using script.py as standalone
-main()
+# main()
