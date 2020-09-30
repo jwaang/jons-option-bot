@@ -57,15 +57,15 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
             for i in range(0, len(puts_filtered)-1):
                 for j in range(i+1, len(puts_filtered)):
                     calculate(spread_type, data, puts_filtered.iloc[i], puts_filtered.iloc[j])
-            df = pd.DataFrame(data, columns=['Strike 1 (LONG)', 'Strike 2 (SHORT)', 'S1 Spread Diff', 'S2 Spread Diff', 'Net Credit', 'Max Loss', 'Max Gain', 'Risk/Reward Ratio', 'PoP (%)'])
+            df = pd.DataFrame(data, columns=['Strike 1\n(LONG)', 'Strike 2\n(SHORT)', 'S1 Spread\nDiff', 'S2 Spread\nDiff', 'Net\nCredit', 'Max\nLoss', 'Max\nGain', 'Risk/Reward\nRatio', 'PoP\n(%)'])
             pd.set_option('display.max_rows', df.shape[0]+1)
             if rr != None:
-                df = df.loc[(df['Risk/Reward Ratio'] >= float(rr))]
+                df = df.loc[(df['Risk/Reward\nRatio'] >= float(rr))]
             if pop != None:
-                df = df.loc[(df['PoP (%)'] >= float(pop))]
+                df = df.loc[(df['PoP\n(%)'] >= float(pop))]
             # if rr == None and pop == None:
             #     df = df.loc[(df['Risk/Reward Ratio'] >= .25) & (df['PoP (%)'] <= 99.99)]
-            return 'No good credit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df.to_string(index=False) # .sort_values(by='Risk/Reward', ascending=False)
+            return 'No good credit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df # .sort_values(by='Risk/Reward', ascending=False)
         elif spread_type == 'ds':
             data = []
             calls = options.get_calls(ticker, date)
@@ -73,15 +73,15 @@ def find_spreads(ticker, date, spread_type, rr=None, pop=None):
             for i in range(0, len(calls_filtered)-1):
                 for j in range(i+1, len(calls_filtered)):
                     calculate(spread_type, data, calls_filtered.iloc[i], calls_filtered.iloc[j])
-            df = pd.DataFrame(data, columns=['Strike 1 (LONG)', 'Strike 2 (SHORT)', 'S1 Spread Diff', 'S2 Spread Diff', 'Net Debit', 'Max Loss', 'Max Gain', 'Risk/Reward Ratio', 'PoP (%)'])
+            df = pd.DataFrame(data, columns=['Strike 1\n(LONG)', 'Strike 2\n(SHORT)', 'S1 Spread\nDiff', 'S2 Spread\nDiff', 'Net\nDebit', 'Max\nLoss', 'Max\nGain', 'Risk/Reward\nRatio', 'PoP\n(%)'])
             pd.set_option('display.max_rows', df.shape[0]+1)
             if rr != None:
-                df = df.loc[(df['Risk/Reward Ratio'] >= float(rr))]
+                df = df.loc[(df['Risk/Reward\nRatio'] >= float(rr))]
             if pop != None:
-                df = df.loc[(df['PoP (%)'] >= float(pop))]
+                df = df.loc[(df['PoP\n(%)'] >= float(pop))]
             # if rr == None and pop == None:
             #     df = df.loc[(df['Risk/Reward Ratio'] >= 2) & (df['PoP (%)'] >= 20)]
-            return 'No good debit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df.to_string(index=False) # .sort_values(by='Risk/Reward', ascending=False)
+            return 'No good debit spreads found. The optional filters (R/R & PoP) may be too strict' if df.empty else df # .sort_values(by='Risk/Reward', ascending=False)
         else:
             return 'Not a valid spread type'
     except AssertionError:
